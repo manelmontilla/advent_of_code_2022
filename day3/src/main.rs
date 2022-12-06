@@ -1,29 +1,21 @@
-use std::{env, fs};
+use std::{collections::HashSet, env, fs};
 
 fn main() {
     solve1();
+    solve2();
 }
 
 static A: u8 = b'A';
 static Z: u8 = b'Z';
 static a: u8 = b'a';
-static z: u8 = b'z';
 
 struct Item(u8);
 impl Item {
     fn priority(&self) -> u8 {
-        let r = 1..57;
         if self.0 <= Z && self.0 >= A {
             return self.0 - A + 27;
         };
         self.0 - a + 1
-    }
-
-    fn from_priority(priority: u8) -> Self {
-        if priority >= 1 && priority <= 26 {
-            return Item(a + (priority - 1));
-        };
-        Item(A + (priority - 1))
     }
 }
 
@@ -63,6 +55,45 @@ impl From<&str> for Rucksack {
     }
 }
 
+struct ElvesGroup {
+    badge: Item,
+}
+
+impl From<(&str, &str, &str)> for ElvesGroup {
+    fn from((first, second, third): (&str, &str, &str)) -> Self {
+        let mut first_chars: HashSet<u8> = HashSet::new();
+        for c in first.as_bytes() {
+            first_chars.insert(c.clone());
+        }
+        let mut second_chars: HashSet<u8> = HashSet::new();
+        for c in second.as_bytes() {
+            second_chars.insert(c.clone());
+        }
+        let first_union_second_chars: HashSet<_> =
+            first_chars.intersection(&second_chars).collect();
+
+        let mut third_chars: HashSet<&u8> = HashSet::new();
+        for c in third.as_bytes() {
+            third_chars.insert(c);
+        }
+        let mut badge: HashSet<_> = first_union_second_chars
+            .intersection(&third_chars)
+            .collect();
+        if badge.len() != 1 {
+            panic!(
+                "invalid number of badges found for {:?}: {:?}",
+                (first, second, third),
+                badge,
+            );
+        };
+        let item: Vec<&&u8> = badge.drain().collect();
+        let item = **item[0];
+        ElvesGroup {
+            badge: Item::from(item),
+        }
+    }
+}
+
 fn solve1() {
     let input = env::args().collect::<Vec<String>>();
     let input = &input[1];
@@ -79,6 +110,32 @@ fn solve1() {
     println!(
         "sum of the repeated priorities in each rucksack {}",
         sum_repeated_priorities
+    );
+}
+
+fn solve2() {
+    let input = env::args().collect::<Vec<String>>();
+    let input = &input[1];
+    let content = fs::read_to_string(input).unwrap();
+    let lines = content.split('\n').collect::<Vec<&str>>();
+    let mut sum_badges: usize = 0;
+    let mut i = 0;
+    loop {
+        if lines[i] == "" {
+            break;
+        }
+        let first = lines[i];
+        i = i + 1;
+        let second = lines[i];
+        i = i + 1;
+        let third = lines[i];
+        let group = ElvesGroup::from((first, second, third));
+        sum_badges = sum_badges + group.badge.priority() as usize;
+        i = i + 1;
+    }
+    println!(
+        "sum of badges item types in each group of three elves is {}",
+        sum_badges
     );
 }
 
